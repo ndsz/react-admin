@@ -1,24 +1,42 @@
 import React, { Component } from 'react'
-import { Form, Input, Button, Icon } from 'antd';
+import { Form, Input, Button, Icon, message } from 'antd';
 
 import './login.less'
-import logo from './images/logo.png'
+import logo from '../../assets/logo.png'
+import storageUtils from '../../utils/storageUtils'
+import memoryUtils from '../../utils/memoryUtils'
+import { reqLogin } from '../../api'
 
 class Login extends Component {
 
+  componentWillMount() {
+    storageUtils.removeUser()
+  }
+
   handleSubmit = (e) => {
     e.preventDefault();
-    const { form } = this.props;
+    const { form, history } = this.props;
     // const values = form.getFieldsValue()
-    form.validateFields((errors, values) => {
+    form.validateFields(async (errors, values) => {
       if (!errors) {
-        console.log('1', values)
+        const { username, password } = values
+        const result = await reqLogin(username, password)
+        const { setUser } = storageUtils;
+        if (result.status === 0) {
+          // 提示登陆成功
+          message.success('登陆成功')
+          memoryUtils.user = result.data // 保存在内存中
+          setUser(result.data)
+          history.replace('/')
+        } else {
+          message.error(result.msg)
+        }
       }
     });
-    // form.validateFields(['username', 'Password'], (errors, values) => {
+    // form.validateFields(['username', 'password'], (errors, values) => {
     //   console.log('2', values)
     // });
-    // form.validateFields(['username', 'Password'], { force: true }, (errors, values) => {
+    // form.validateFields(['username', 'password'], { force: true }, (errors, values) => {
     //   console.log('3', values)
     // });
     // console.log('e', values, form);
@@ -65,6 +83,7 @@ class Login extends Component {
                   { max: 12, message: '必须小于等于 12 位' },
                   { pattern: /^[a-zA-Z0-9_]+$/, message: '必须是英文、数字或下划线组成' }
                 ],
+                initialValue: 'admin'
               })(
               <Input
                   prefix={<Icon type="user" style={{ color: 'rgba(0,0,0,.25)' }} />}
@@ -74,7 +93,7 @@ class Login extends Component {
             </Form.Item>
             <Form.Item>
               {
-                getFieldDecorator('Password', {
+                getFieldDecorator('password', {
                   rules: [
                     {
                     required: true, message: '请输入密码！'
@@ -85,7 +104,7 @@ class Login extends Component {
                   {
                     validator: this.validator
                   }
-                ]
+                ],
                 })(
                   <Input
                     prefix={<Icon type="lock" style={{ color: 'rgba(0,0,0,.25)' }} />}
