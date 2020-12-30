@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { Form, Input, Button, Icon, message } from 'antd';
+import { Redirect } from 'react-router-dom'
 
 import './login.less'
 import logo from '../../assets/logo.png'
@@ -10,7 +11,9 @@ import { reqLogin } from '../../api'
 class Login extends Component {
 
   componentWillMount() {
-    storageUtils.removeUser()
+    // storageUtils.removeUser()
+    // memoryUtils.user = {}
+    // 如果用户已经登陆, 自动跳转到管理界面
   }
 
   handleSubmit = (e) => {
@@ -65,6 +68,11 @@ class Login extends Component {
   }
 
   render() {
+    const user = memoryUtils.user
+    if(user && user._id) {
+      return <Redirect to='/'/>
+    }
+    
     const { getFieldDecorator } = this.props.form;
     return (
       <div className="login">

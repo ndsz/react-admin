@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, withRouter } from 'react-router-dom'
 import { Menu, Icon } from 'antd';
 
 import logo from '../../assets/logo.png'
@@ -8,7 +8,7 @@ import './index.less'
 
 const { SubMenu } = Menu;
 
-export default class LeftNav extends Component {
+class LeftNav extends Component {
   constructor(props) {
     super(props)
     this.state = {
@@ -46,6 +46,9 @@ export default class LeftNav extends Component {
   }
 
   getMenuNodes_reduce = menuList => {
+    // 得到当前请求的路由路径
+    const path = this.props.location.pathname
+
     return menuList.reduce((pre, item) => {
       if (!item.children) {
         pre.push(
@@ -57,6 +60,13 @@ export default class LeftNav extends Component {
           </Menu.Item>
         )
       } else {
+        // 查找一个与当前请求路径匹配的子Item
+        const cItem = item.children.find(cItem => path.indexOf(cItem.key)===0)
+        // 如果存在, 说明当前item的子列表需要打开
+        if (cItem) {
+          this.openKey = item.key
+        }
+        
         pre.push(
           <SubMenu
             key={item.key}
@@ -75,7 +85,13 @@ export default class LeftNav extends Component {
     }, [])
   }
 
+  componentWillMount() {
+    this.menuNodes = this.getMenuNodes_reduce(menuList)
+  }
+
   render () {
+    const path = this.props.location.pathname
+    
     return (
       <div className="left-nav">
         <Link to="/" className="left-nav-header">
@@ -83,17 +99,24 @@ export default class LeftNav extends Component {
           <h1>后台管理</h1>
         </Link>
         <Menu
-          // defaultSelectedKeys={['/home']}
-          // defaultOpenKeys={['sub1']}
+          selectedKeys={[path]}
           mode="inline"
           theme="dark"
+          defaultOpenKeys={[this.openKey]}
           // inlineCollapsed={this.state.collapsed}
         >
           {
-            this.getMenuNodes_reduce(menuList)
+            this.menuNodes
           }
         </Menu>
       </div>
     )
   }
 }
+
+/*
+withRouter高阶组件:
+包装非路由组件, 返回一个新的组件
+新的组件向非路由组件传递3个属性: history/location/match
+ */
+export default withRouter(LeftNav)
