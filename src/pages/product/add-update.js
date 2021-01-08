@@ -7,6 +7,8 @@ import PriceInput from './priceInput'
 import PicturesWall from './pictures-wall'
 // import RichTextEditor from './rich-text-editor'
 import { reqAddOrUpdateProduct } from '../../api'
+import moment from 'moment'
+import ProRangePicker from './pro-rangePicker'
 
 const Item = Form.Item
 
@@ -33,9 +35,10 @@ class ProductAddUpdate extends Component {
     // 进行表单验证, 如果通过了, 才发送请求
     this.props.form.validateFields(async (error, values) => {
       if (!error) {
-
+        console.log('values', values)
         // 1. 收集数据, 并封装成product对象
-        const {name, desc, price, categoryIds} = values
+        const {name, desc, price, categoryIds, time} = values
+        console.log(typeof time[0] , moment(time[0]).format('YYYY-wo'), moment(time[1]).format('YYYY-wo'))
         let pCategoryId, categoryId
         if (categoryIds.length===1) {
           pCategoryId = '0'
@@ -78,6 +81,18 @@ class ProductAddUpdate extends Component {
     } else {
       callback('价格必须大于0') // 验证没通过
     }
+  }
+
+  validateTime = (rule, value, callback) => {
+    if (value && value[0] && value[1]) {
+      callback() // 验证通过
+    } else {
+      callback('请输入时间区间！') // 验证没通过
+    }
+  }
+
+  onChange = (value, dateString) => {
+    console.log('1', value, dateString)
   }
 
   render () {
@@ -178,6 +193,20 @@ class ProductAddUpdate extends Component {
               initialValue: { number: 0, currency: 'rmb' },
             })(<PriceInput />)}
           </Item>
+          <Item label="时间">
+            {
+              getFieldDecorator('time', {
+                initialValue: [moment(new Date()), moment(new Date('2021-01-23'))],
+                rules: [
+                  { required: true, message: '请输入时间' },
+                  {validator: this.validateTime}
+                ]
+              })(
+                <ProRangePicker onChange={this.onChange} placeholder='请输入时间'/>
+              )
+            }
+          </Item>
+          {/* <ProRangePicker placeholder='请输入时间'/> */}
           <Item label="商品图片">
             <PicturesWall ref={this.pw} imgs={imgs} />
           </Item>

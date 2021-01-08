@@ -2,7 +2,9 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { Upload, Modal, Icon, message } from 'antd';
 import {reqDeleteImg} from '../../api'
-import {BASE_IMG_URL} from "../../utils/constants";
+import {BASE_IMG_URL} from "../../utils/constants"
+import ImgCrop from '../../components/antd-img-crop'
+import lrz from 'lrz'
 
 function getBase64(file) {
   return new Promise((resolve, reject) => {
@@ -71,6 +73,77 @@ export default class PicturesWall extends Component {
   // 隐藏modal
   handleCancel = () => this.setState({ previewVisible: false });
 
+  dataUrltoFile = (dataurl, filename) => {
+    const arr = dataurl.split(',')
+    const mine = arr[0].match(/:(.*?);/)[1]
+    const bstr = atob(arr[1])
+    let n = bstr.length
+    const uBarr = new Uint8Array(n)
+    while(n--){
+      uBarr[n] = bstr.charCodeAt(n)
+    }
+    return new File([uBarr], filename, { type: mine })
+  }
+
+  backPromise = res => {
+    return new Promise((resolve, reject) => {
+      if (res instanceof Object) {
+        const file = this.dataUrltoFile(res.base64, res.origin.name)
+        Object.assign(file, {
+          uid: file.lastModified
+        })
+        resolve(file)
+      } else {
+        reject('压缩失败！')
+      }
+    })
+  }
+
+  compress = file => {
+    try {
+      let ratio = 1
+      debugger
+      const { size } = file
+      console.log('size', size, size / 1024)
+      if (size !== undefined && size > 102400) {
+        debugger
+        ratio = parseFloat(102400 / size)
+        return lrz(file, {
+          quality: ratio
+        }).then(rst => {
+          console.log('rst', rst)
+          return this.backPromise(rst)
+        }).catch(() => {
+          return false
+        })
+      }
+      return true
+    } catch (error) {
+      
+    }
+  }
+
+  beforeUpload = (file, fileList) => {
+    console.log('file', file, fileList)
+    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+    if (!isJpgOrPng) {
+      message.error('You can only upload JPG/PNG file!');
+    }
+    console.log('压缩前', file.size)
+    const p = this.compress(file)
+    console.log('压缩后', file.size)
+    console.log('p', p)
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    // if (!isLt2M) {
+    //   message.error('Image must smaller than 2MB!');
+    // }
+    if (isJpgOrPng) {
+      return p
+    }
+    // return isJpgOrPng && isLt2M;
+    return false
+  }
+
   handlePreview = async file => {
     console.log('file', file)
     // 显示指定file对应的大图
@@ -123,18 +196,26 @@ export default class PicturesWall extends Component {
       </div>
     );
     return (
-      <>
-        <Upload
-          action="/manage/img/upload" /*上传图片的接口地址*/
-          accept='image/*'  /*只接收图片格式*/
-          name='image' /*请求参数名*/
-          listType="picture-card"  /*卡片样式*/
-          fileList={fileList}  /*所有已上传图片文件对象的数组*/
-          onPreview={this.handlePreview}
-          onChange={this.handleChange}
+      <div>
+        <ImgCrop
+          aspect={359 / 412}
+          modalWidth={800}
+          grid={false}
+          rotate={true}
         >
-          {fileList.length >= 4 ? null : uploadButton}
-        </Upload>
+          <Upload
+            action="/manage/img/upload" /*上传图片的接口地址*/
+            accept='image/*'  /*只接收图片格式*/
+            name='image' /*请求参数名*/
+            listType="picture-card"  /*卡片样式*/
+            fileList={fileList}  /*所有已上传图片文件对象的数组*/
+            onPreview={this.handlePreview}
+            beforeUpload={this.beforeUpload}
+            onChange={this.handleChange}
+          >
+            {fileList.length >= 4 ? null : uploadButton}
+          </Upload>
+        </ImgCrop>
         <Modal
           visible={previewVisible}
           // title={previewTitle}
@@ -143,7 +224,7 @@ export default class PicturesWall extends Component {
         >
           <img alt="example" style={{ width: '100%' }} src={previewImage} />
         </Modal>
-      </>
+      </div>
     );
   }
 }
